@@ -24,6 +24,8 @@ model User {
   upvotedPosts          Post[]               @relation("UpvotesOnPosts")
   downvotedPosts        Post[]               @relation("DownvotesOnPosts")
   bookmarkedPosts       Post[]               @relation("BookmarkedPosts")
+  upvotedComments       Comment[]            @relation("UpvotesOnComments")
+  downvotedComments     Comment[]            @relation("DownvotesOnComments")
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
 
@@ -75,12 +77,14 @@ model Post {
 }
 
 model Comment {
-  id      String @id @default(cuid())
-  author  User   @relation(fields: [userId], references: [id])
-  userId  String
-  content String
-  Post    Post   @relation(fields: [postId], references: [id])
-  postId  String
+  id        String @id @default(cuid())
+  author    User   @relation(fields: [userId], references: [id])
+  userId    String
+  content   String
+  Post      Post   @relation(fields: [postId], references: [id])
+  postId    String
+  upvotes   User[] @relation("UpvotesOnComments")
+  downvotes User[] @relation("DownvotesOnComments")
 
   parentCommentId String?   @unique
   parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
