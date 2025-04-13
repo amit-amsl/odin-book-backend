@@ -5,11 +5,13 @@ import { StatusCodes } from 'http-status-codes';
 import { prisma } from '@/utils/db';
 
 const createCommunity = asyncHandler(async (req: Request, res: Response) => {
+  // TODO: Fix this type issue
   const { userId } = req.user;
   const { name, description } = req.body as {
     name: string;
     description?: string;
   };
+  const normalizedInputName = name.toLowerCase();
 
   if (!name) {
     res
@@ -18,9 +20,26 @@ const createCommunity = asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
+  const communityExists = await prisma.community.findUnique({
+    where: {
+      normalizedName: normalizedInputName,
+    },
+  });
+
+  if (communityExists) {
+    res
+      .status(StatusCodes.BAD_REQUEST)
+      .json({
+        message:
+          'Community with the same name already exists, please choose another name.',
+      });
+    return;
+  }
+
   const createdCommunity = await prisma.community.create({
     data: {
       name,
+      normalizedName: normalizedInputName,
       description,
       subscribers: {
         create: {
@@ -34,8 +53,27 @@ const createCommunity = asyncHandler(async (req: Request, res: Response) => {
   res.status(StatusCodes.CREATED).json(createdCommunity);
 });
 
-const getCommunityByName = asyncHandler(
-  async (req: Request, res: Response) => {}
-);
+const getCommunityByName = asyncHandler(async (req: Request, res: Response) => {
+  const { communityName } = req.params;
+
+  const community = await prisma.community.findUnique({
+    where: {
+      normalizedName: communityName.toLowerCase(),
+    },
+    include: {
+      posts: true,
+      subscribers: true,
+    },
+  });
+
+  if (!community) {
+    res
+      .status(StatusCodes.NOT_FOUND)
+      .json({ message: 'Community does not exist!' });
+    return;
+  }
+
+  res.status(StatusCodes.ACCEPTED).json(community);
+});
 
 export { createCommunity, getCommunityByName };
