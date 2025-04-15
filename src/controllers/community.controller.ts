@@ -5,7 +5,6 @@ import { StatusCodes } from 'http-status-codes';
 import { prisma } from '@/utils/db';
 
 const createCommunity = asyncHandler(async (req: Request, res: Response) => {
-  // TODO: Fix this type issue
   const { userId } = req.user;
   const { name, description } = req.body as {
     name: string;
@@ -27,12 +26,10 @@ const createCommunity = asyncHandler(async (req: Request, res: Response) => {
   });
 
   if (communityExists) {
-    res
-      .status(StatusCodes.BAD_REQUEST)
-      .json({
-        message:
-          'Community with the same name already exists, please choose another name.',
-      });
+    res.status(StatusCodes.BAD_REQUEST).json({
+      message:
+        'Community with the same name already exists, please choose another name.',
+    });
     return;
   }
 
