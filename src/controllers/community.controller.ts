@@ -52,7 +52,17 @@ const getCommunityByName = asyncHandler(async (req: Request, res: Response) => {
     },
     include: {
       posts: true,
-      subscribers: true,
+      subscribers: {
+        select: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+          isModerator: true,
+        },
+      },
     },
   });
 

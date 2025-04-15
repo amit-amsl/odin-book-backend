@@ -2,11 +2,16 @@ import asyncHandler from 'express-async-handler';
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { prisma } from '@/utils/db';
+import { createPostSchema } from '@/validators/postSchemas';
+import { z } from 'zod';
+
+type createPostRequestBodyData = z.infer<typeof createPostSchema>;
 
 const createPost = asyncHandler(async (req: Request, res: Response) => {
-  const { communityName } = req.params;
-  const { title, content, isNSFW, isSpoiler } = req.body;
   const { userId } = req.user;
+  const { communityName } = req.params;
+  const { title, content, isNSFW, isSpoiler } =
+    req.body as createPostRequestBodyData;
 
   const createdPost = await prisma.post.create({
     data: {
