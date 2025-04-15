@@ -4,9 +4,15 @@ import jwt from 'jsonwebtoken';
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { prisma } from '@/utils/db';
+import { z } from 'zod';
+import { loginSchema, registerSchema } from '@/validators/authSchemas';
+
+type loginRequestBodyData = z.infer<typeof loginSchema>;
+
+type RegisterRequestBodyData = z.infer<typeof registerSchema>;
 
 const login = asyncHandler(async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body as loginRequestBodyData;
 
   const user = await prisma.user.findUnique({
     where: {
@@ -51,7 +57,7 @@ const login = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const register = asyncHandler(async (req: Request, res: Response) => {
-  const { email, username, password } = req.body;
+  const { email, username, password } = req.body as RegisterRequestBodyData;
 
   const usernameOrEmailExists = await prisma.user.findFirst({
     where: { OR: [{ username }, { email }] },
