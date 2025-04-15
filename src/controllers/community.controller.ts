@@ -50,8 +50,26 @@ const getCommunityByName = asyncHandler(async (req: Request, res: Response) => {
     where: {
       normalizedName: communityName.toLowerCase(),
     },
-    include: {
-      posts: true,
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      createdAt: true,
+      posts: {
+        select: {
+          id: true,
+          title: true,
+          author: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+          isNSFW: true,
+          isSpoiler: true,
+          createdAt: true,
+        },
+      },
       subscribers: {
         select: {
           user: {

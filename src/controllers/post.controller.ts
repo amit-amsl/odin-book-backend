@@ -52,7 +52,13 @@ const getPostById = asyncHandler(async (req: Request, res: Response) => {
         normalizedName: communityName.toLowerCase(),
       },
     },
-    include: {
+    select: {
+      title: true,
+      content: true,
+      author: { select: { username: true } },
+      isNSFW: true,
+      isSpoiler: true,
+      createdAt: true,
       comments: {
         select: {
           author: {
