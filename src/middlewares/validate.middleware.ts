@@ -9,8 +9,6 @@ export const validateRequestData =
   (req: Request, res: Response, next: NextFunction) => {
     const validationResult = schema.safeParse(req[source]);
 
-    console.log(validationResult);
-
     if (!validationResult.success) {
       res.status(StatusCodes.UNPROCESSABLE_ENTITY).json({
         message: 'Validation failed',
@@ -18,8 +16,6 @@ export const validateRequestData =
       });
       return;
     }
-
-    console.log(validationResult.data);
 
     req[source] = validationResult.data;
     next();

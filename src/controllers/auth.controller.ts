@@ -8,13 +8,6 @@ import { prisma } from '@/utils/db';
 const login = asyncHandler(async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  // if (!email || !password) {
-  //   res
-  //     .status(StatusCodes.BAD_REQUEST)
-  //     .json({ message: 'Please provide all required fields' });
-  //   return;
-  // }
-
   const user = await prisma.user.findUnique({
     where: {
       email,
@@ -60,13 +53,6 @@ const login = asyncHandler(async (req: Request, res: Response) => {
 const register = asyncHandler(async (req: Request, res: Response) => {
   const { email, username, password } = req.body;
 
-  // if (!email || !password || !username) {
-  //   res
-  //     .status(StatusCodes.BAD_REQUEST)
-  //     .json({ message: 'Please provide all required fields' });
-  //   return;
-  // }
-
   const usernameOrEmailExists = await prisma.user.findFirst({
     where: { OR: [{ username }, { email }] },
   });
@@ -92,10 +78,6 @@ const register = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const logout = asyncHandler(async (req: Request, res: Response) => {
-  // res.cookie('authToken', 'logout', {
-  //   httpOnly: true,
-  //   expires: new Date(Date.now() + 1 * 1000),
-  // });
   res.clearCookie('authToken');
   res
     .status(StatusCodes.OK)
