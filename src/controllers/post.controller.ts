@@ -13,6 +13,19 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
   const { title, content, isNSFW, isSpoiler } =
     req.body as createPostRequestBodyData;
 
+  const communityExists = await prisma.community.findUnique({
+    where: {
+      normalizedName: communityName.toLowerCase(),
+    },
+  });
+
+  if (!communityExists) {
+    res
+      .status(StatusCodes.NOT_FOUND)
+      .json({ message: 'Community does not exist!' });
+    return;
+  }
+
   const createdPost = await prisma.post.create({
     data: {
       title,
