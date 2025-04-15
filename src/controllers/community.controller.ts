@@ -2,21 +2,15 @@ import asyncHandler from 'express-async-handler';
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { prisma } from '@/utils/db';
+import { z } from 'zod';
+import { createCommunitySchema } from '@/validators/communitySchemas';
+
+type createCommunityRequestBodyData = z.infer<typeof createCommunitySchema>;
 
 const createCommunity = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { name, description } = req.body as {
-    name: string;
-    description?: string;
-  };
+  const { name, description } = req.body as createCommunityRequestBodyData;
   const normalizedInputName = name.toLowerCase();
-
-  if (!name) {
-    res
-      .status(StatusCodes.BAD_REQUEST)
-      .json({ message: 'Please provide all required fields' });
-    return;
-  }
 
   const communityExists = await prisma.community.findUnique({
     where: {

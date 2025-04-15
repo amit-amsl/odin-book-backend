@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { userAuthenticationCheck } from '@/middlewares/auth.middleware';
+import { validateRequestData } from '@/middlewares/validate.middleware';
+import { createCommunitySchema } from '@/validators/communitySchemas';
 import {
   createCommunity,
   getCommunityByName,
@@ -9,7 +11,11 @@ const communityRouter = Router();
 
 communityRouter.use(userAuthenticationCheck);
 
-communityRouter.post('/', createCommunity);
+communityRouter.post(
+  '/',
+  validateRequestData(createCommunitySchema),
+  createCommunity
+);
 
 communityRouter.get('/:communityName', getCommunityByName);
 
