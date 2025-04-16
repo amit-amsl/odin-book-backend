@@ -5,6 +5,7 @@ import { createCommunitySchema } from '@/validators/communitySchemas';
 import {
   createCommunity,
   getCommunityByName,
+  handleUserSubscription,
 } from '@/controllers/community.controller';
 
 const communityRouter = Router();
@@ -18,5 +19,7 @@ communityRouter.post(
 );
 
 communityRouter.get('/:communityName', getCommunityByName);
+
+communityRouter.post('/:communityName/subscribe', handleUserSubscription);
 
 export { communityRouter };

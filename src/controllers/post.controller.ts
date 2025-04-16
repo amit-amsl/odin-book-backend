@@ -103,4 +103,25 @@ const getPostById = asyncHandler(async (req: Request, res: Response) => {
   res.status(StatusCodes.ACCEPTED).json(post);
 });
 
-export { createPost, getPostById };
+const handlePostVoting = asyncHandler(
+  async (req: Request, res: Response) => {}
+);
+
+const createComment = asyncHandler(async (req: Request, res: Response) => {});
+
+const handleCommentVoting = asyncHandler(
+  async (req: Request, res: Response) => {}
+);
+
+const createCommentReply = asyncHandler(
+  async (req: Request, res: Response) => {}
+);
+
+export {
+  createPost,
+  getPostById,
+  handlePostVoting,
+  createComment,
+  handleCommentVoting,
+  createCommentReply,
+};

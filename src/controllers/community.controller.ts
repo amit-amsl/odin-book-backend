@@ -94,4 +94,58 @@ const getCommunityByName = asyncHandler(async (req: Request, res: Response) => {
   res.status(StatusCodes.ACCEPTED).json(community);
 });
 
-export { createCommunity, getCommunityByName };
+const handleUserSubscription = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req.user;
+    const { communityName } = req.params;
+
+    const communityExists = await prisma.community.findUnique({
+      where: {
+        normalizedName: communityName.toLowerCase(),
+      },
+    });
+
+    if (!communityExists) {
+      res
+        .status(StatusCodes.NOT_FOUND)
+        .json({ message: 'Community does not exist!' });
+      return;
+    }
+
+    const isUserSubscribed = await prisma.usersOnCommunities.findUnique({
+      where: {
+        userId_communityId: { userId, communityId: communityExists.id },
+      },
+    });
+
+    if (isUserSubscribed) {
+      await prisma.usersOnCommunities.delete({
+        where: {
+          userId_communityId: {
+            userId,
+            communityId: isUserSubscribed.communityId,
+          },
+        },
+      });
+      res
+        .status(StatusCodes.ACCEPTED)
+        .json({ message: 'User unsubscribed from community successfully!' });
+      return;
+    }
+    await prisma.community.update({
+      where: {
+        normalizedName: communityName.toLowerCase(),
+      },
+      data: {
+        subscribers: {
+          create: { userId },
+        },
+      },
+    });
+    res
+      .status(StatusCodes.ACCEPTED)
+      .json({ message: 'User subscribed to community successfully!' });
+  }
+);
+
+export { createCommunity, getCommunityByName, handleUserSubscription };
