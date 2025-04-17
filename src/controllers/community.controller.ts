@@ -68,6 +68,13 @@ const getCommunityByName = asyncHandler(async (req: Request, res: Response) => {
           isNSFW: true,
           isSpoiler: true,
           createdAt: true,
+          _count: {
+            select: {
+              upvotes: true,
+              downvotes: true,
+              comments: true,
+            },
+          },
         },
       },
       subscribers: {
@@ -91,7 +98,7 @@ const getCommunityByName = asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  res.status(StatusCodes.ACCEPTED).json(community);
+  res.status(StatusCodes.OK).json(community);
 });
 
 const handleUserSubscription = asyncHandler(
@@ -128,7 +135,7 @@ const handleUserSubscription = asyncHandler(
         },
       });
       res
-        .status(StatusCodes.ACCEPTED)
+        .status(StatusCodes.OK)
         .json({ message: 'User unsubscribed from community successfully!' });
       return;
     }
@@ -143,7 +150,7 @@ const handleUserSubscription = asyncHandler(
       },
     });
     res
-      .status(StatusCodes.ACCEPTED)
+      .status(StatusCodes.OK)
       .json({ message: 'User subscribed to community successfully!' });
   }
 );
