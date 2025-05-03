@@ -6,6 +6,7 @@ import {
   createCommunity,
   getCommunityByName,
   handleUserSubscription,
+  getSubscribedCommunitiesFeed,
 } from '@/controllers/community.controller';
 
 const communityRouter = Router();
@@ -17,6 +18,8 @@ communityRouter.post(
   validateRequestData(createCommunitySchema),
   createCommunity
 );
+
+communityRouter.get('/feed', getSubscribedCommunitiesFeed);
 
 communityRouter.get('/:communityName', getCommunityByName);
 

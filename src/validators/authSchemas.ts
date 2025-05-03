@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const loginSchema = z.object({
   email: z.string().trim().email('Invalid email address format'),
-  password: z.string().min(8),
+  password: z.string().min(1),
 });
 
 export const registerSchema = z.object({
@@ -17,9 +17,6 @@ export const registerSchema = z.object({
     )
     .refine((value) => !/^\d+$/.test(value), {
       message: 'Username cannot be only numbers',
-    })
-    .refine((value) => !/[@$!%*?&]/.test(value), {
-      message: 'Username cannot contain special characters like @$!%*?&',
     }),
   password: z
     .string()

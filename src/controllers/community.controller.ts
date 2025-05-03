@@ -44,6 +44,7 @@ const createCommunity = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const getCommunityByName = asyncHandler(async (req: Request, res: Response) => {
+  const { userId } = req.user;
   const { communityName } = req.params;
 
   const community = await prisma.community.findUnique({
@@ -67,6 +68,22 @@ const getCommunityByName = asyncHandler(async (req: Request, res: Response) => {
           },
           isNSFW: true,
           isSpoiler: true,
+          upvotes: {
+            where: {
+              id: userId,
+            },
+            select: {
+              id: true,
+            },
+          },
+          downvotes: {
+            where: {
+              id: userId,
+            },
+            select: {
+              id: true,
+            },
+          },
           createdAt: true,
           _count: {
             select: {
@@ -155,4 +172,89 @@ const handleUserSubscription = asyncHandler(
   }
 );
 
-export { createCommunity, getCommunityByName, handleUserSubscription };
+const getSubscribedCommunitiesFeed = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req.user;
+
+    const userSubscribedCommunities = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      select: {
+        subscribedCommunities: {
+          select: {
+            communityId: true,
+          },
+        },
+      },
+    });
+
+    if (!userSubscribedCommunities?.subscribedCommunities) {
+      res
+        .status(StatusCodes.OK)
+        .json({ message: 'User is not subscribed to any community!' });
+      return;
+    }
+
+    const userPersonalFeedPosts = await prisma.post.findMany({
+      where: {
+        communityId: {
+          in: [
+            ...userSubscribedCommunities?.subscribedCommunities.map(
+              (subComm) => subComm.communityId
+            ),
+          ],
+        },
+      },
+      select: {
+        id: true,
+        title: true,
+        author: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+        community: {
+          select: {
+            normalizedName: true,
+          },
+        },
+        isNSFW: true,
+        isSpoiler: true,
+        upvotes: {
+          where: {
+            id: userId,
+          },
+          select: {
+            id: true,
+          },
+        },
+        downvotes: {
+          where: {
+            id: userId,
+          },
+          select: {
+            id: true,
+          },
+        },
+        createdAt: true,
+        _count: {
+          select: {
+            upvotes: true,
+            downvotes: true,
+            comments: true,
+          },
+        },
+      },
+    });
+    res.status(StatusCodes.OK).json(userPersonalFeedPosts);
+  }
+);
+
+export {
+  createCommunity,
+  getCommunityByName,
+  handleUserSubscription,
+  getSubscribedCommunitiesFeed,
+};

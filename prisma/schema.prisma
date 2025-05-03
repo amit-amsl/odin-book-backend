@@ -88,7 +88,7 @@ model Comment {
   upvotes   User[] @relation("UpvotesOnComments")
   downvotes User[] @relation("DownvotesOnComments")
 
-  parentCommentId String?   @unique
+  parentCommentId String?
   parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
   replies         Comment[] @relation("CommentReplies")
 

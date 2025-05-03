@@ -51,6 +51,7 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const getPostById = asyncHandler(async (req: Request, res: Response) => {
+  const { userId } = req.user;
   const { communityName, postId } = req.params;
 
   const post = await prisma.post.findUnique({
@@ -71,10 +72,29 @@ const getPostById = asyncHandler(async (req: Request, res: Response) => {
       },
       isNSFW: true,
       isSpoiler: true,
+      upvotes: {
+        where: {
+          id: userId,
+        },
+        select: {
+          id: true,
+        },
+      },
+      downvotes: {
+        where: {
+          id: userId,
+        },
+        select: {
+          id: true,
+        },
+      },
       createdAt: true,
       comments: {
         where: {
           parentCommentId: null,
+        },
+        orderBy: {
+          createdAt: 'desc',
         },
         select: {
           id: true,
@@ -84,6 +104,7 @@ const getPostById = asyncHandler(async (req: Request, res: Response) => {
               username: true,
             },
           },
+          parentCommentId: true,
           content: true,
           _count: {
             select: {
@@ -91,12 +112,32 @@ const getPostById = asyncHandler(async (req: Request, res: Response) => {
               downvotes: true,
             },
           },
+          upvotes: {
+            where: {
+              id: userId,
+            },
+            select: {
+              id: true,
+            },
+          },
+          downvotes: {
+            where: {
+              id: userId,
+            },
+            select: {
+              id: true,
+            },
+          },
           replies: {
             where: {
               parentCommentId: { not: null },
             },
+            orderBy: {
+              createdAt: 'desc',
+            },
             select: {
               id: true,
+              parentCommentId: true,
               author: {
                 select: {
                   id: true,
@@ -110,6 +151,23 @@ const getPostById = asyncHandler(async (req: Request, res: Response) => {
                   downvotes: true,
                 },
               },
+              upvotes: {
+                where: {
+                  id: userId,
+                },
+                select: {
+                  id: true,
+                },
+              },
+              downvotes: {
+                where: {
+                  id: userId,
+                },
+                select: {
+                  id: true,
+                },
+              },
+              createdAt: true,
             },
           },
           createdAt: true,
@@ -119,6 +177,7 @@ const getPostById = asyncHandler(async (req: Request, res: Response) => {
         select: {
           upvotes: true,
           downvotes: true,
+          comments: true,
         },
       },
     },
@@ -129,7 +188,9 @@ const getPostById = asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  res.status(StatusCodes.OK).json(post);
+  res
+    .status(StatusCodes.OK)
+    .json({ ...post, normalizedCommunityName: communityName.toLowerCase() });
 });
 
 const handlePostVoting = asyncHandler(async (req: Request, res: Response) => {
@@ -230,7 +291,54 @@ const handlePostVoting = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  res.status(StatusCodes.OK).json({ message: `Post has been voted!` });
+  const updatedVotedPost = await prisma.post.findUnique({
+    where: {
+      id: postId,
+      community: {
+        normalizedName: communityName.toLowerCase(),
+      },
+    },
+    select: {
+      id: true,
+      title: true,
+      author: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+      isNSFW: true,
+      isSpoiler: true,
+      upvotes: {
+        where: {
+          id: userId,
+        },
+        select: {
+          id: true,
+        },
+      },
+      downvotes: {
+        where: {
+          id: userId,
+        },
+        select: {
+          id: true,
+        },
+      },
+      createdAt: true,
+      _count: {
+        select: {
+          upvotes: true,
+          downvotes: true,
+          comments: true,
+        },
+      },
+    },
+  });
+
+  res
+    .status(StatusCodes.OK)
+    .json({ message: `Post has been voted!`, ...updatedVotedPost });
 });
 
 const createComment = asyncHandler(async (req: Request, res: Response) => {
@@ -265,6 +373,40 @@ const createComment = asyncHandler(async (req: Request, res: Response) => {
       content,
       userId,
       postId,
+    },
+    select: {
+      id: true,
+      author: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+      parentCommentId: true,
+      content: true,
+      upvotes: {
+        where: {
+          id: userId,
+        },
+        select: {
+          id: true,
+        },
+      },
+      downvotes: {
+        where: {
+          id: userId,
+        },
+        select: {
+          id: true,
+        },
+      },
+      createdAt: true,
+      _count: {
+        select: {
+          upvotes: true,
+          downvotes: true,
+        },
+      },
     },
   });
 
@@ -374,9 +516,51 @@ const handleCommentVoting = asyncHandler(
       }
     }
 
-    res
-      .status(StatusCodes.OK)
-      .json({ message: `Comment/Reply has been voted!` });
+    const updatedVotedComment = await prisma.comment.findUnique({
+      where: {
+        id: commentId,
+        postId,
+      },
+      select: {
+        id: true,
+        author: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+        parentCommentId: true,
+        content: true,
+        upvotes: {
+          where: {
+            id: userId,
+          },
+          select: {
+            id: true,
+          },
+        },
+        downvotes: {
+          where: {
+            id: userId,
+          },
+          select: {
+            id: true,
+          },
+        },
+        createdAt: true,
+        _count: {
+          select: {
+            upvotes: true,
+            downvotes: true,
+          },
+        },
+      },
+    });
+
+    res.status(StatusCodes.OK).json({
+      message: `Comment/Reply has been voted!`,
+      ...updatedVotedComment,
+    });
   }
 );
 
@@ -413,6 +597,40 @@ const createCommentReply = asyncHandler(async (req: Request, res: Response) => {
       userId,
       postId,
       parentCommentId: commentId,
+    },
+    select: {
+      id: true,
+      author: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+      parentCommentId: true,
+      content: true,
+      upvotes: {
+        where: {
+          id: userId,
+        },
+        select: {
+          id: true,
+        },
+      },
+      downvotes: {
+        where: {
+          id: userId,
+        },
+        select: {
+          id: true,
+        },
+      },
+      createdAt: true,
+      _count: {
+        select: {
+          upvotes: true,
+          downvotes: true,
+        },
+      },
     },
   });
 
