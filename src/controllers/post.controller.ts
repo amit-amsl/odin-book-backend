@@ -341,6 +341,62 @@ const handlePostVoting = asyncHandler(async (req: Request, res: Response) => {
     .json({ message: `Post has been voted!`, ...updatedVotedPost });
 });
 
+const getCommentsByPostId = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req.user;
+    const { communityName, postId } = req.params;
+
+    const postComments = await prisma.comment.findMany({
+      where: {
+        postId,
+        Post: {
+          community: { normalizedName: communityName },
+        },
+        parentCommentId: null,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      select: {
+        id: true,
+        author: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+        parentCommentId: true,
+        content: true,
+        createdAt: true,
+        _count: {
+          select: {
+            upvotes: true,
+            downvotes: true,
+            replies: true,
+          },
+        },
+        upvotes: {
+          where: {
+            id: userId,
+          },
+          select: {
+            id: true,
+          },
+        },
+        downvotes: {
+          where: {
+            id: userId,
+          },
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+    res.status(StatusCodes.OK).json(postComments);
+  }
+);
+
 const createComment = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { communityName, postId } = req.params;
@@ -413,156 +469,156 @@ const createComment = asyncHandler(async (req: Request, res: Response) => {
   res.status(StatusCodes.CREATED).json(createdComment);
 });
 
-const handleCommentVoting = asyncHandler(
-  async (req: Request, res: Response) => {
-    const { userId } = req.user;
-    const { communityName, postId, commentId } = req.params;
-    const { voteValue } = req.body as handleVotingRequestBodyData;
+// const handleCommentVoting = asyncHandler(
+//   async (req: Request, res: Response) => {
+//     const { userId } = req.user;
+//     const { communityName, postId, commentId } = req.params;
+//     const { voteValue } = req.body as handleVotingRequestBodyData;
 
-    const communityExists = await prisma.community.findUnique({
-      where: {
-        normalizedName: communityName.toLowerCase(),
-      },
-    });
+//     const communityExists = await prisma.community.findUnique({
+//       where: {
+//         normalizedName: communityName.toLowerCase(),
+//       },
+//     });
 
-    const postExists = await prisma.post.findUnique({
-      where: {
-        id: postId,
-        community: {
-          normalizedName: communityName.toLowerCase(),
-        },
-      },
-    });
+//     const postExists = await prisma.post.findUnique({
+//       where: {
+//         id: postId,
+//         community: {
+//           normalizedName: communityName.toLowerCase(),
+//         },
+//       },
+//     });
 
-    if (!communityExists || !postExists) {
-      res
-        .status(StatusCodes.NOT_FOUND)
-        .json({ message: 'Community or Post does not exist!' });
-      return;
-    }
+//     if (!communityExists || !postExists) {
+//       res
+//         .status(StatusCodes.NOT_FOUND)
+//         .json({ message: 'Community or Post does not exist!' });
+//       return;
+//     }
 
-    const comment = await prisma.comment.findUnique({
-      where: {
-        id: commentId,
-        postId,
-      },
-      include: {
-        upvotes: { where: { id: userId } },
-        downvotes: { where: { id: userId } },
-      },
-    });
+//     const comment = await prisma.comment.findUnique({
+//       where: {
+//         id: commentId,
+//         postId,
+//       },
+//       include: {
+//         upvotes: { where: { id: userId } },
+//         downvotes: { where: { id: userId } },
+//       },
+//     });
 
-    if (!comment) {
-      res
-        .status(StatusCodes.NOT_FOUND)
-        .json({ message: 'Comment/Reply does not exist!' });
-      return;
-    }
+//     if (!comment) {
+//       res
+//         .status(StatusCodes.NOT_FOUND)
+//         .json({ message: 'Comment/Reply does not exist!' });
+//       return;
+//     }
 
-    const userAlreadyUpvoted = comment.upvotes.length > 0;
-    const userAlreadyDownvoted = comment.downvotes.length > 0;
-    const isUpvote = voteValue === 1;
-    const isDownvote = voteValue === -1;
+//     const userAlreadyUpvoted = comment.upvotes.length > 0;
+//     const userAlreadyDownvoted = comment.downvotes.length > 0;
+//     const isUpvote = voteValue === 1;
+//     const isDownvote = voteValue === -1;
 
-    if (isUpvote) {
-      if (userAlreadyUpvoted) {
-        await prisma.comment.update({
-          where: {
-            id: commentId,
-            postId,
-          },
-          data: {
-            upvotes: { disconnect: { id: userId } },
-          },
-        });
-      } else {
-        await prisma.comment.update({
-          where: {
-            id: commentId,
-            postId,
-          },
-          data: {
-            downvotes: userAlreadyDownvoted
-              ? { disconnect: { id: userId } }
-              : undefined,
-            upvotes: { connect: { id: userId } },
-          },
-        });
-      }
-    } else if (isDownvote) {
-      if (userAlreadyDownvoted) {
-        await prisma.comment.update({
-          where: {
-            id: commentId,
-            postId,
-          },
-          data: {
-            downvotes: { disconnect: { id: userId } },
-          },
-        });
-      } else {
-        await prisma.comment.update({
-          where: {
-            id: commentId,
-            postId,
-          },
-          data: {
-            upvotes: userAlreadyUpvoted
-              ? { disconnect: { id: userId } }
-              : undefined,
-            downvotes: { connect: { id: userId } },
-          },
-        });
-      }
-    }
+//     if (isUpvote) {
+//       if (userAlreadyUpvoted) {
+//         await prisma.comment.update({
+//           where: {
+//             id: commentId,
+//             postId,
+//           },
+//           data: {
+//             upvotes: { disconnect: { id: userId } },
+//           },
+//         });
+//       } else {
+//         await prisma.comment.update({
+//           where: {
+//             id: commentId,
+//             postId,
+//           },
+//           data: {
+//             downvotes: userAlreadyDownvoted
+//               ? { disconnect: { id: userId } }
+//               : undefined,
+//             upvotes: { connect: { id: userId } },
+//           },
+//         });
+//       }
+//     } else if (isDownvote) {
+//       if (userAlreadyDownvoted) {
+//         await prisma.comment.update({
+//           where: {
+//             id: commentId,
+//             postId,
+//           },
+//           data: {
+//             downvotes: { disconnect: { id: userId } },
+//           },
+//         });
+//       } else {
+//         await prisma.comment.update({
+//           where: {
+//             id: commentId,
+//             postId,
+//           },
+//           data: {
+//             upvotes: userAlreadyUpvoted
+//               ? { disconnect: { id: userId } }
+//               : undefined,
+//             downvotes: { connect: { id: userId } },
+//           },
+//         });
+//       }
+//     }
 
-    const updatedVotedComment = await prisma.comment.findUnique({
-      where: {
-        id: commentId,
-        postId,
-      },
-      select: {
-        id: true,
-        author: {
-          select: {
-            id: true,
-            username: true,
-          },
-        },
-        parentCommentId: true,
-        content: true,
-        upvotes: {
-          where: {
-            id: userId,
-          },
-          select: {
-            id: true,
-          },
-        },
-        downvotes: {
-          where: {
-            id: userId,
-          },
-          select: {
-            id: true,
-          },
-        },
-        createdAt: true,
-        _count: {
-          select: {
-            upvotes: true,
-            downvotes: true,
-          },
-        },
-      },
-    });
+//     const updatedVotedComment = await prisma.comment.findUnique({
+//       where: {
+//         id: commentId,
+//         postId,
+//       },
+//       select: {
+//         id: true,
+//         author: {
+//           select: {
+//             id: true,
+//             username: true,
+//           },
+//         },
+//         parentCommentId: true,
+//         content: true,
+//         upvotes: {
+//           where: {
+//             id: userId,
+//           },
+//           select: {
+//             id: true,
+//           },
+//         },
+//         downvotes: {
+//           where: {
+//             id: userId,
+//           },
+//           select: {
+//             id: true,
+//           },
+//         },
+//         createdAt: true,
+//         _count: {
+//           select: {
+//             upvotes: true,
+//             downvotes: true,
+//           },
+//         },
+//       },
+//     });
 
-    res.status(StatusCodes.OK).json({
-      message: `Comment/Reply has been voted!`,
-      ...updatedVotedComment,
-    });
-  }
-);
+//     res.status(StatusCodes.OK).json({
+//       message: `Comment/Reply has been voted!`,
+//       ...updatedVotedComment,
+//     });
+//   }
+// );
 
 const createCommentReply = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.user;
@@ -629,6 +685,7 @@ const createCommentReply = asyncHandler(async (req: Request, res: Response) => {
         select: {
           upvotes: true,
           downvotes: true,
+          replies: true,
         },
       },
     },
@@ -641,7 +698,7 @@ export {
   createPost,
   getPostById,
   handlePostVoting,
+  getCommentsByPostId,
   createComment,
-  handleCommentVoting,
   createCommentReply,
 };

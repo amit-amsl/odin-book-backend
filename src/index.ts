@@ -8,6 +8,8 @@ import cookieParser from 'cookie-parser';
 import { authRouter } from './routes/auth.routes';
 import { communityRouter } from './routes/community.routes';
 import { postRouter } from './routes/post.routes';
+import { commentRouter } from './routes/comment.routes';
+import { userRouter } from './routes/user.routes';
 
 dotenv.config();
 const PORT = process.env.PORT || 3000;
@@ -30,8 +32,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use('/api/auth', authRouter);
+app.use('/api/user', userRouter);
 app.use('/api/community', communityRouter);
 app.use('/api/post', postRouter);
+app.use('/api/comments', commentRouter);
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err.stack);
