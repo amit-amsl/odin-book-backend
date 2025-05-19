@@ -176,6 +176,10 @@ const getSubscribedCommunitiesFeed = asyncHandler(
   async (req: Request, res: Response) => {
     const { userId } = req.user;
 
+    const page = Number(req.query.page as string) || 1;
+    const limit = Number(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
     const userSubscribedCommunities = await prisma.user.findUnique({
       where: {
         id: userId,
@@ -206,6 +210,8 @@ const getSubscribedCommunitiesFeed = asyncHandler(
           ],
         },
       },
+      skip,
+      take: limit,
       select: {
         id: true,
         title: true,
@@ -248,7 +254,27 @@ const getSubscribedCommunitiesFeed = asyncHandler(
         },
       },
     });
-    res.status(StatusCodes.OK).json(userPersonalFeedPosts);
+
+    const totalUserPersonalFeedPosts = await prisma.post.count({
+      where: {
+        communityId: {
+          in: [
+            ...userSubscribedCommunities?.subscribedCommunities.map(
+              (subComm) => subComm.communityId
+            ),
+          ],
+        },
+      },
+    });
+
+    res.status(StatusCodes.OK).json({
+      data: userPersonalFeedPosts,
+      meta: {
+        page,
+        total: totalUserPersonalFeedPosts,
+        totalPages: Math.ceil(totalUserPersonalFeedPosts / limit),
+      },
+    });
   }
 );
 
