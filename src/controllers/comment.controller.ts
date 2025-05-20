@@ -12,6 +12,10 @@ const getRepliesByCommentId = asyncHandler(
     const { userId } = req.user;
     const { commentId } = req.params;
 
+    const page = Number(req.query.page as string) || 1;
+    const limit = Number(req.query.limit as string) || 4;
+    const skip = (page - 1) * limit;
+
     const commentReplies = await prisma.comment.findMany({
       where: {
         parentCommentId: commentId,
@@ -19,6 +23,8 @@ const getRepliesByCommentId = asyncHandler(
       orderBy: {
         createdAt: 'desc',
       },
+      skip,
+      take: limit,
       select: {
         id: true,
         author: {
@@ -55,7 +61,21 @@ const getRepliesByCommentId = asyncHandler(
         createdAt: true,
       },
     });
-    res.status(StatusCodes.OK).json(commentReplies);
+
+    const totalCommentReplies = await prisma.comment.count({
+      where: {
+        parentCommentId: commentId,
+      },
+    });
+
+    res.status(StatusCodes.OK).json({
+      data: commentReplies,
+      meta: {
+        page,
+        total: totalCommentReplies,
+        totalPages: Math.ceil(totalCommentReplies / limit),
+      },
+    });
   }
 );
 
