@@ -346,9 +346,8 @@ const getCommentsByPostId = asyncHandler(
     const { userId } = req.user;
     const { communityName, postId } = req.params;
 
-    const page = Number(req.query.page as string) || 1;
     const limit = Number(req.query.limit as string) || 10;
-    const skip = (page - 1) * limit;
+    const cursor = req.query.cursor as string | undefined;
 
     const postComments = await prisma.comment.findMany({
       where: {
@@ -358,10 +357,9 @@ const getCommentsByPostId = asyncHandler(
         },
         parentCommentId: null,
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      skip,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0,
       take: limit,
       select: {
         id: true,
@@ -400,22 +398,15 @@ const getCommentsByPostId = asyncHandler(
       },
     });
 
-    const totalPostComments = await prisma.comment.count({
-      where: {
-        postId,
-        Post: {
-          community: { normalizedName: communityName },
-        },
-        parentCommentId: null,
-      },
-    });
+    const nextCursor =
+      postComments.length === limit
+        ? postComments[postComments.length - 1].id
+        : null;
 
     res.status(StatusCodes.OK).json({
       data: postComments,
       meta: {
-        page,
-        total: totalPostComments,
-        totalPages: Math.ceil(totalPostComments / limit),
+        nextCursor,
       },
     });
   }
