@@ -81,28 +81,6 @@ const handleCommentVoting = asyncHandler(
     const { commentId } = req.params;
     const { voteValue } = req.body as handleVotingRequestBodyData;
 
-    // const communityExists = await prisma.community.findUnique({
-    //   where: {
-    //     normalizedName: communityName.toLowerCase(),
-    //   },
-    // });
-
-    // const postExists = await prisma.post.findUnique({
-    //   where: {
-    //     id: postId,
-    //     community: {
-    //       normalizedName: communityName.toLowerCase(),
-    //     },
-    //   },
-    // });
-
-    // if (!communityExists || !postExists) {
-    //   res
-    //     .status(StatusCodes.NOT_FOUND)
-    //     .json({ message: 'Community or Post does not exist!' });
-    //   return;
-    // }
-
     const comment = await prisma.comment.findUnique({
       where: {
         id: commentId,
