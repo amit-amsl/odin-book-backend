@@ -176,9 +176,8 @@ const getSubscribedCommunitiesFeed = asyncHandler(
   async (req: Request, res: Response) => {
     const { userId } = req.user;
 
-    const page = Number(req.query.page as string) || 1;
     const limit = Number(req.query.limit as string) || 10;
-    const skip = (page - 1) * limit;
+    const cursor = req.query.cursor as string | undefined;
 
     const userSubscribedCommunities = await prisma.user.findUnique({
       where: {
@@ -210,8 +209,11 @@ const getSubscribedCommunitiesFeed = asyncHandler(
           ],
         },
       },
-      skip,
-      take: limit,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...(cursor && {
+        cursor: { id: cursor },
+      }),
+      take: limit + 1,
       select: {
         id: true,
         title: true,
@@ -255,24 +257,17 @@ const getSubscribedCommunitiesFeed = asyncHandler(
       },
     });
 
-    const totalUserPersonalFeedPosts = await prisma.post.count({
-      where: {
-        communityId: {
-          in: [
-            ...userSubscribedCommunities?.subscribedCommunities.map(
-              (subComm) => subComm.communityId
-            ),
-          ],
-        },
-      },
-    });
+    const hasNextPage = userPersonalFeedPosts.length > limit;
+    const nextCursor = hasNextPage
+      ? userPersonalFeedPosts[userPersonalFeedPosts.length - 1].id
+      : null;
 
     res.status(StatusCodes.OK).json({
-      data: userPersonalFeedPosts,
+      data: hasNextPage
+        ? userPersonalFeedPosts.slice(0, -1)
+        : userPersonalFeedPosts,
       meta: {
-        page,
-        total: totalUserPersonalFeedPosts,
-        totalPages: Math.ceil(totalUserPersonalFeedPosts / limit),
+        nextCursor,
       },
     });
   }
