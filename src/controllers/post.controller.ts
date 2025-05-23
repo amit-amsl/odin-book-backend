@@ -358,9 +358,10 @@ const getCommentsByPostId = asyncHandler(
         parentCommentId: null,
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      cursor: cursor ? { id: cursor } : undefined,
-      skip: cursor ? 1 : 0,
-      take: limit,
+      ...(cursor && {
+        cursor: { id: cursor },
+      }),
+      take: limit + 1,
       select: {
         id: true,
         author: {
@@ -398,13 +399,13 @@ const getCommentsByPostId = asyncHandler(
       },
     });
 
-    const nextCursor =
-      postComments.length === limit
-        ? postComments[postComments.length - 1].id
-        : null;
+    const hasNextPage = postComments.length > limit;
+    const nextCursor = hasNextPage
+      ? postComments[postComments.length - 1].id
+      : null;
 
     res.status(StatusCodes.OK).json({
-      data: postComments,
+      data: hasNextPage ? postComments.slice(0, -1) : postComments,
       meta: {
         nextCursor,
       },

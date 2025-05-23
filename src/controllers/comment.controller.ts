@@ -12,19 +12,18 @@ const getRepliesByCommentId = asyncHandler(
     const { userId } = req.user;
     const { commentId } = req.params;
 
-    // const page = Number(req.query.page as string) || 1;
     const limit = Number(req.query.limit as string) || 4;
     const cursor = req.query.cursor as string | undefined;
-    // const skip = (page - 1) * limit;
 
     const commentReplies = await prisma.comment.findMany({
       where: {
         parentCommentId: commentId,
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      cursor: cursor ? { id: cursor } : undefined,
-      skip: cursor ? 1 : 0,
-      take: limit,
+      ...(cursor && {
+        cursor: { id: cursor },
+      }),
+      take: limit + 1,
       select: {
         id: true,
         author: {
@@ -62,24 +61,15 @@ const getRepliesByCommentId = asyncHandler(
       },
     });
 
-    const nextCursor =
-      commentReplies.length === limit
-        ? commentReplies[commentReplies.length - 1].id
-        : null;
-
-    // const totalCommentReplies = await prisma.comment.count({
-    //   where: {
-    //     parentCommentId: commentId,
-    //   },
-    // });
+    const hasNextPage = commentReplies.length > limit;
+    const nextCursor = hasNextPage
+      ? commentReplies[commentReplies.length - 1].id
+      : null;
 
     res.status(StatusCodes.OK).json({
-      data: commentReplies,
+      data: hasNextPage ? commentReplies.slice(0, -1) : commentReplies,
       meta: {
         nextCursor,
-        // page,
-        // total: totalCommentReplies,
-        // totalPages: Math.ceil(totalCommentReplies / limit),
       },
     });
   }
