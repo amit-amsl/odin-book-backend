@@ -8,6 +8,7 @@ import {
   handleVotingSchema,
 } from '@/validators/postSchemas';
 import { z } from 'zod';
+import { prismaPostQueryFieldSelection } from '@/utils/prismaUtils';
 
 type createPostRequestBodyData = z.infer<typeof createPostSchema>;
 
@@ -47,12 +48,34 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 
-  res.status(StatusCodes.CREATED).json(createdPost);
+  res.status(StatusCodes.CREATED).json({
+    message: `Post has been created successfully!`,
+    postId: createdPost.id,
+  });
 });
 
 const getPostById = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { communityName, postId } = req.params;
+
+  const isPostBookmarkedByUser = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      bookmarkedPosts: {
+        where: {
+          id: postId,
+          community: {
+            normalizedName: communityName.toLowerCase(),
+          },
+        },
+        select: {
+          id: true,
+        },
+      },
+    },
+  });
 
   const post = await prisma.post.findUnique({
     where: {
@@ -61,126 +84,7 @@ const getPostById = asyncHandler(async (req: Request, res: Response) => {
         normalizedName: communityName.toLowerCase(),
       },
     },
-    select: {
-      title: true,
-      content: true,
-      author: {
-        select: {
-          id: true,
-          username: true,
-        },
-      },
-      isNSFW: true,
-      isSpoiler: true,
-      upvotes: {
-        where: {
-          id: userId,
-        },
-        select: {
-          id: true,
-        },
-      },
-      downvotes: {
-        where: {
-          id: userId,
-        },
-        select: {
-          id: true,
-        },
-      },
-      createdAt: true,
-      comments: {
-        where: {
-          parentCommentId: null,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        select: {
-          id: true,
-          author: {
-            select: {
-              id: true,
-              username: true,
-            },
-          },
-          parentCommentId: true,
-          content: true,
-          _count: {
-            select: {
-              upvotes: true,
-              downvotes: true,
-            },
-          },
-          upvotes: {
-            where: {
-              id: userId,
-            },
-            select: {
-              id: true,
-            },
-          },
-          downvotes: {
-            where: {
-              id: userId,
-            },
-            select: {
-              id: true,
-            },
-          },
-          replies: {
-            where: {
-              parentCommentId: { not: null },
-            },
-            orderBy: {
-              createdAt: 'desc',
-            },
-            select: {
-              id: true,
-              parentCommentId: true,
-              author: {
-                select: {
-                  id: true,
-                  username: true,
-                },
-              },
-              content: true,
-              _count: {
-                select: {
-                  upvotes: true,
-                  downvotes: true,
-                },
-              },
-              upvotes: {
-                where: {
-                  id: userId,
-                },
-                select: {
-                  id: true,
-                },
-              },
-              downvotes: {
-                where: {
-                  id: userId,
-                },
-                select: {
-                  id: true,
-                },
-              },
-              createdAt: true,
-            },
-          },
-          createdAt: true,
-        },
-      },
-      _count: {
-        select: {
-          upvotes: true,
-          downvotes: true,
-          comments: true,
-        },
-      },
-    },
+    select: { ...prismaPostQueryFieldSelection(userId), content: true },
   });
 
   if (!post) {
@@ -188,9 +92,16 @@ const getPostById = asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  res
-    .status(StatusCodes.OK)
-    .json({ ...post, normalizedCommunityName: communityName.toLowerCase() });
+  const { upvotes, downvotes, bookmarks, community, ...newPost } = post;
+  const formattedPost = {
+    ...newPost,
+    communityNormalizedName: community.normalizedName,
+    isPostBookmarked: !!isPostBookmarkedByUser?.bookmarkedPosts.length,
+    isPostUpvoted: !!upvotes.length,
+    isPostDownvoted: !!downvotes.length,
+  };
+
+  res.status(StatusCodes.OK).json(formattedPost);
 });
 
 const handlePostVoting = asyncHandler(async (req: Request, res: Response) => {
@@ -301,46 +212,30 @@ const handlePostVoting = asyncHandler(async (req: Request, res: Response) => {
       },
     },
     select: {
-      id: true,
-      title: true,
-      author: {
-        select: {
-          id: true,
-          username: true,
-        },
-      },
-      isNSFW: true,
-      isSpoiler: true,
-      upvotes: {
-        where: {
-          id: userId,
-        },
-        select: {
-          id: true,
-        },
-      },
-      downvotes: {
-        where: {
-          id: userId,
-        },
-        select: {
-          id: true,
-        },
-      },
-      createdAt: true,
-      _count: {
-        select: {
-          upvotes: true,
-          downvotes: true,
-          comments: true,
-        },
-      },
+      ...prismaPostQueryFieldSelection(userId),
     },
   });
 
+  if (!updatedVotedPost) {
+    res
+      .status(StatusCodes.NOT_FOUND)
+      .json({ message: 'Updated voted post does not exist!' });
+    return;
+  }
+
+  const { upvotes, downvotes, bookmarks, community, ...newUpdatedVotedPost } =
+    updatedVotedPost;
+  const formattedUpdatedVotedPost = {
+    ...newUpdatedVotedPost,
+    communityNormalizedName: community.normalizedName,
+    isPostBookmarked: !!bookmarks.length,
+    isPostUpvoted: !!upvotes.length,
+    isPostDownvoted: !!downvotes.length,
+  };
+
   res
     .status(StatusCodes.OK)
-    .json({ message: `Post has been voted!`, ...updatedVotedPost });
+    .json({ message: `Post has been voted!`, ...formattedUpdatedVotedPost });
 });
 
 const getCommentsByPostId = asyncHandler(
@@ -561,6 +456,65 @@ const createCommentReply = asyncHandler(async (req: Request, res: Response) => {
   res.status(StatusCodes.CREATED).json(createdReply);
 });
 
+const handlePostBookmark = asyncHandler(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { communityName, postId } = req.params;
+
+  const isPostBookmarkedByUser = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      bookmarkedPosts: {
+        where: {
+          id: postId,
+          community: {
+            normalizedName: communityName.toLowerCase(),
+          },
+        },
+        select: {
+          id: true,
+        },
+      },
+    },
+  });
+
+  if (!!isPostBookmarkedByUser?.bookmarkedPosts.length) {
+    await prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        bookmarkedPosts: {
+          disconnect: { id: postId },
+        },
+      },
+    });
+
+    res.status(StatusCodes.OK).json({
+      message: `Post bookmark has been deleted!`,
+      isPostBookmarked: false,
+    });
+    return;
+  }
+
+  await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      bookmarkedPosts: {
+        connect: { id: postId },
+      },
+    },
+  });
+
+  res.status(StatusCodes.OK).json({
+    message: `Post bookmark has been added!`,
+    isPostBookmarked: true,
+  });
+});
+
 export {
   createPost,
   getPostById,
@@ -568,4 +522,5 @@ export {
   getCommentsByPostId,
   createComment,
   createCommentReply,
+  handlePostBookmark,
 };

@@ -4,9 +4,10 @@ import { validateRequestData } from '@/middlewares/validate.middleware';
 import { createCommunitySchema } from '@/validators/communitySchemas';
 import {
   createCommunity,
-  getCommunityByName,
+  getCommunity,
+  getPaginatedCommunityPosts,
   handleUserSubscription,
-  getSubscribedCommunitiesFeed,
+  getCommunitiesFeed,
 } from '@/controllers/community.controller';
 
 const communityRouter = Router();
@@ -19,9 +20,13 @@ communityRouter.post(
   createCommunity
 );
 
-communityRouter.get('/feed', getSubscribedCommunitiesFeed);
+communityRouter.get('/feed', getCommunitiesFeed('subscribed'));
 
-communityRouter.get('/:communityName', getCommunityByName);
+communityRouter.get('/all', getCommunitiesFeed('all'));
+
+communityRouter.get('/:communityName', getCommunity);
+
+communityRouter.get('/:communityName/posts', getPaginatedCommunityPosts);
 
 communityRouter.post('/:communityName/subscribe', handleUserSubscription);
 

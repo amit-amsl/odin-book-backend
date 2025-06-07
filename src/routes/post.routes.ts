@@ -13,6 +13,7 @@ import {
   getPostById,
   handlePostVoting,
   getCommentsByPostId,
+  handlePostBookmark,
 } from '@/controllers/post.controller';
 
 const postRouter = Router();
@@ -52,5 +53,7 @@ postRouter.post(
   validateRequestData(createCommentSchema),
   createCommentReply
 );
+
+postRouter.post('/:communityName/:postId/bookmark', handlePostBookmark);
 
 export { postRouter };

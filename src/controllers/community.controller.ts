@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes';
 import { prisma } from '@/utils/db';
 import { z } from 'zod';
 import { createCommunitySchema } from '@/validators/communitySchemas';
+import { prismaPostQueryFieldSelection } from '@/utils/prismaUtils';
 
 type createCommunityRequestBodyData = z.infer<typeof createCommunitySchema>;
 
@@ -43,7 +44,7 @@ const createCommunity = asyncHandler(async (req: Request, res: Response) => {
   res.status(StatusCodes.CREATED).json(createdCommunity);
 });
 
-const getCommunityByName = asyncHandler(async (req: Request, res: Response) => {
+const getCommunity = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { communityName } = req.params;
 
@@ -56,44 +57,6 @@ const getCommunityByName = asyncHandler(async (req: Request, res: Response) => {
       name: true,
       description: true,
       createdAt: true,
-      posts: {
-        select: {
-          id: true,
-          title: true,
-          author: {
-            select: {
-              id: true,
-              username: true,
-            },
-          },
-          isNSFW: true,
-          isSpoiler: true,
-          upvotes: {
-            where: {
-              id: userId,
-            },
-            select: {
-              id: true,
-            },
-          },
-          downvotes: {
-            where: {
-              id: userId,
-            },
-            select: {
-              id: true,
-            },
-          },
-          createdAt: true,
-          _count: {
-            select: {
-              upvotes: true,
-              downvotes: true,
-              comments: true,
-            },
-          },
-        },
-      },
       subscribers: {
         select: {
           user: {
@@ -115,8 +78,77 @@ const getCommunityByName = asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  res.status(StatusCodes.OK).json(community);
+  const { subscribers, ...NewCommunity } = community;
+  const currentUser = subscribers.find((sub) => sub.user.id === userId);
+  const formattedCommunityResponse = {
+    ...NewCommunity,
+    subscribersAmount: subscribers.length,
+    isUserSubscribed: !!currentUser?.user,
+    isUserModerator: !!currentUser?.user ? currentUser.isModerator : false,
+  };
+
+  res.status(StatusCodes.OK).json(formattedCommunityResponse);
 });
+
+const getPaginatedCommunityPosts = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req.user;
+    const { communityName } = req.params;
+
+    const limit = Number(req.query.limit as string) || 10;
+    const cursor = req.query.cursor as string | undefined;
+
+    const communityPosts = await prisma.community.findUnique({
+      where: {
+        normalizedName: communityName.toLowerCase(),
+      },
+      select: {
+        posts: {
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          ...(cursor && {
+            cursor: { id: cursor },
+          }),
+          take: limit + 1,
+          select: {
+            ...prismaPostQueryFieldSelection(userId),
+          },
+        },
+      },
+    });
+
+    if (!communityPosts) {
+      res
+        .status(StatusCodes.NOT_FOUND)
+        .json({ message: 'Community does not exist!' });
+      return;
+    }
+
+    const formattedCommunityPosts = communityPosts.posts.map((post) => {
+      const { bookmarks, upvotes, downvotes, community, ...newPost } = post;
+      return {
+        ...newPost,
+        communityNormalizedName: community.normalizedName,
+        isPostBookmarked: !!bookmarks.length,
+        isPostUpvoted: !!upvotes.length,
+        isPostDownvoted: !!downvotes.length,
+      };
+    });
+
+    const hasNextPage = formattedCommunityPosts.length > limit;
+    const nextCursor = hasNextPage
+      ? formattedCommunityPosts[formattedCommunityPosts.length - 1].id
+      : null;
+
+    res.status(StatusCodes.OK).json({
+      data: hasNextPage
+        ? formattedCommunityPosts.slice(0, -1)
+        : formattedCommunityPosts,
+      meta: {
+        nextCursor,
+      },
+    });
+  }
+);
 
 const handleUserSubscription = asyncHandler(
   async (req: Request, res: Response) => {
@@ -142,7 +174,8 @@ const handleUserSubscription = asyncHandler(
       },
     });
 
-    if (isUserSubscribed) {
+    const isUserMod = isUserSubscribed?.isModerator;
+    if (isUserSubscribed && !isUserMod) {
       await prisma.usersOnCommunities.delete({
         where: {
           userId_communityId: {
@@ -154,6 +187,11 @@ const handleUserSubscription = asyncHandler(
       res
         .status(StatusCodes.OK)
         .json({ message: 'User unsubscribed from community successfully!' });
+      return;
+    } else if (isUserMod) {
+      res
+        .status(StatusCodes.BAD_REQUEST)
+        .json({ message: 'Moderator user cannot unsubscribe from community!' });
       return;
     }
     await prisma.community.update({
@@ -172,35 +210,36 @@ const handleUserSubscription = asyncHandler(
   }
 );
 
-const getSubscribedCommunitiesFeed = asyncHandler(
-  async (req: Request, res: Response) => {
+const getCommunitiesFeed = (feedType: 'all' | 'subscribed') =>
+  asyncHandler(async (req: Request, res: Response) => {
     const { userId } = req.user;
 
     const limit = Number(req.query.limit as string) || 10;
     const cursor = req.query.cursor as string | undefined;
 
-    const userSubscribedCommunities = await prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
-      select: {
-        subscribedCommunities: {
-          select: {
-            communityId: true,
+    let postQueryWhereClause = undefined;
+
+    if (feedType === 'subscribed') {
+      const userSubscribedCommunities = await prisma.user.findUnique({
+        where: {
+          id: userId,
+        },
+        select: {
+          subscribedCommunities: {
+            select: {
+              communityId: true,
+            },
           },
         },
-      },
-    });
+      });
+      if (!userSubscribedCommunities?.subscribedCommunities) {
+        res
+          .status(StatusCodes.OK)
+          .json({ message: 'User is not subscribed to any community!' });
+        return;
+      }
 
-    if (!userSubscribedCommunities?.subscribedCommunities) {
-      res
-        .status(StatusCodes.OK)
-        .json({ message: 'User is not subscribed to any community!' });
-      return;
-    }
-
-    const userPersonalFeedPosts = await prisma.post.findMany({
-      where: {
+      postQueryWhereClause = {
         communityId: {
           in: [
             ...userSubscribedCommunities?.subscribedCommunities.map(
@@ -208,74 +247,49 @@ const getSubscribedCommunitiesFeed = asyncHandler(
             ),
           ],
         },
-      },
+      };
+    }
+
+    const userPersonalFeedPosts = await prisma.post.findMany({
+      ...(postQueryWhereClause && { where: postQueryWhereClause }),
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       ...(cursor && {
         cursor: { id: cursor },
       }),
       take: limit + 1,
-      select: {
-        id: true,
-        title: true,
-        author: {
-          select: {
-            id: true,
-            username: true,
-          },
-        },
-        community: {
-          select: {
-            normalizedName: true,
-          },
-        },
-        isNSFW: true,
-        isSpoiler: true,
-        upvotes: {
-          where: {
-            id: userId,
-          },
-          select: {
-            id: true,
-          },
-        },
-        downvotes: {
-          where: {
-            id: userId,
-          },
-          select: {
-            id: true,
-          },
-        },
-        createdAt: true,
-        _count: {
-          select: {
-            upvotes: true,
-            downvotes: true,
-            comments: true,
-          },
-        },
-      },
+      select: { ...prismaPostQueryFieldSelection(userId) },
     });
 
-    const hasNextPage = userPersonalFeedPosts.length > limit;
+    const formattedUserFeedPosts = userPersonalFeedPosts.map((post) => {
+      const { bookmarks, upvotes, downvotes, community, ...newPost } = post;
+      return {
+        ...newPost,
+        communityNormalizedName: community.normalizedName,
+        isPostBookmarked: !!bookmarks.length,
+        isPostUpvoted: !!upvotes.length,
+        isPostDownvoted: !!downvotes.length,
+      };
+    });
+
+    const hasNextPage = formattedUserFeedPosts.length > limit;
     const nextCursor = hasNextPage
-      ? userPersonalFeedPosts[userPersonalFeedPosts.length - 1].id
+      ? formattedUserFeedPosts[formattedUserFeedPosts.length - 1].id
       : null;
 
     res.status(StatusCodes.OK).json({
       data: hasNextPage
-        ? userPersonalFeedPosts.slice(0, -1)
-        : userPersonalFeedPosts,
+        ? formattedUserFeedPosts.slice(0, -1)
+        : formattedUserFeedPosts,
       meta: {
         nextCursor,
       },
     });
-  }
-);
+  });
 
 export {
   createCommunity,
-  getCommunityByName,
+  getCommunity,
+  getPaginatedCommunityPosts,
   handleUserSubscription,
-  getSubscribedCommunitiesFeed,
+  getCommunitiesFeed,
 };
