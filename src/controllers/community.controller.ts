@@ -41,7 +41,10 @@ const createCommunity = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 
-  res.status(StatusCodes.CREATED).json(createdCommunity);
+  res.status(StatusCodes.CREATED).json({
+    message: `Community has been created successfully!`,
+    communityNormalizedName: createdCommunity.normalizedName,
+  });
 });
 
 const getCommunity = asyncHandler(async (req: Request, res: Response) => {

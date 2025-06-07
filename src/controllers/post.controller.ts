@@ -374,6 +374,7 @@ const createComment = asyncHandler(async (req: Request, res: Response) => {
         select: {
           upvotes: true,
           downvotes: true,
+          replies: true,
         },
       },
     },
@@ -447,7 +448,6 @@ const createCommentReply = asyncHandler(async (req: Request, res: Response) => {
         select: {
           upvotes: true,
           downvotes: true,
-          replies: true,
         },
       },
     },
