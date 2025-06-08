@@ -2,6 +2,9 @@ import asyncHandler from 'express-async-handler';
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { prisma } from '@/utils/db';
+import { cloudinary, uploadFileToCloudinary } from '@/utils/cloudinary';
+import { UploadApiResponse } from 'cloudinary';
+import sharp from 'sharp';
 
 const getUserSubscribedCommunities = asyncHandler(
   async (req: Request, res: Response) => {
@@ -45,6 +48,7 @@ const getUserProfile = asyncHandler(async (req: Request, res: Response) => {
     select: {
       id: true,
       email: isProfileOfCurrentUser,
+      profile_img_url: true,
       comments: {
         select: {
           _count: {
@@ -91,6 +95,7 @@ const getUserProfile = asyncHandler(async (req: Request, res: Response) => {
     email: user.email,
     totalCommentCredit,
     totalPostCredit,
+    avatarUrl: user.profile_img_url,
     createdAt: user.createdAt,
   };
 
@@ -253,9 +258,63 @@ const getUserBookmarks = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+const editUserProfile = asyncHandler(async (req: Request, res: Response) => {
+  const { username } = req.user;
+  console.log(req.file);
+  await fakeNetworkDelay(3000);
+  const existingAvatar = await prisma.user.findUnique({
+    where: {
+      username,
+    },
+    select: {
+      profile_img_publicId: true,
+    },
+  });
+
+  if (req.file) {
+    const resizedAvatarBuffer = await sharp(req.file.buffer)
+      .resize(150, 150)
+      .toBuffer();
+    const uploadedAvatarCloudinaryRes = (await uploadFileToCloudinary(
+      resizedAvatarBuffer,
+      {
+        folder: 'tidder_app',
+        resource_type: 'image',
+      }
+    )) as UploadApiResponse;
+    console.log(uploadedAvatarCloudinaryRes);
+    await prisma.user.update({
+      where: {
+        username,
+      },
+      data: {
+        profile_img_publicId: uploadedAvatarCloudinaryRes.public_id,
+        profile_img_url: uploadedAvatarCloudinaryRes.secure_url,
+      },
+    });
+
+    if (existingAvatar?.profile_img_publicId?.length) {
+      await cloudinary.uploader.destroy(existingAvatar?.profile_img_publicId);
+    }
+
+    res
+      .status(StatusCodes.OK)
+      .json({ message: 'User profile updated successfully' });
+  }
+});
+
+const fakeNetworkDelay = async (t: number) => {
+  return new Promise<void>((resolve, reject) => {
+    setTimeout(() => {
+      resolve();
+    }, t);
+  });
+};
+
 export {
   getUserSubscribedCommunities,
   getUserProfile,
   getUserSubmittedPosts,
   getUserBookmarks,
+  editUserProfile,
 };

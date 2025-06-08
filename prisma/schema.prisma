@@ -18,6 +18,8 @@ model User {
   username              String               @unique
   email                 String               @unique
   hashedPassword        String
+  profile_img_url       String?
+  profile_img_publicId  String?
   posts                 Post[]
   comments              Comment[]
   subscribedCommunities UsersOnCommunities[]

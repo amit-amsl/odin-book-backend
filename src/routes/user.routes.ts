@@ -5,7 +5,9 @@ import {
   getUserProfile,
   getUserSubmittedPosts,
   getUserBookmarks,
+  editUserProfile,
 } from '@/controllers/user.controller';
+import { uploadImageFile } from '@/middlewares/multer.middleware';
 
 const userRouter = Router();
 
@@ -18,5 +20,11 @@ userRouter.get('/:username', getUserProfile);
 userRouter.get('/:username/submittedPosts', getUserSubmittedPosts);
 
 userRouter.get('/:username/bookmarks', getUserBookmarks);
+
+userRouter.patch(
+  '/:username/edit',
+  uploadImageFile.single('avatar'),
+  editUserProfile
+);
 
 export { userRouter };
