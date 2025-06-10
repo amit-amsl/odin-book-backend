@@ -1,4 +1,9 @@
-import { login, logout, register } from '@/controllers/auth.controller';
+import {
+  login,
+  logout,
+  register,
+  guestLogin,
+} from '@/controllers/auth.controller';
 import { userAuthenticationCheck } from '@/middlewares/auth.middleware';
 import { validateRequestData } from '@/middlewares/validate.middleware';
 import { loginSchema, registerSchema } from '@/validators/authSchemas';
@@ -17,6 +22,8 @@ authRouter.get(
 );
 
 authRouter.post('/login', validateRequestData(loginSchema), login);
+
+authRouter.post('/guest-login', guestLogin);
 
 authRouter.post('/register', validateRequestData(registerSchema), register);
 
