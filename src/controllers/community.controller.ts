@@ -5,8 +5,14 @@ import { prisma } from '@/utils/db';
 import { z } from 'zod';
 import { createCommunitySchema } from '@/validators/communitySchemas';
 import { prismaPostQueryFieldSelection } from '@/utils/prismaUtils';
+import { sub } from 'date-fns';
+
+const TWENTY_FOUR_HOURS_AGO = sub(new Date(), { hours: 24 });
+const WEEK_AGO = sub(new Date(), { weeks: 1 });
 
 type createCommunityRequestBodyData = z.infer<typeof createCommunitySchema>;
+
+type SortByQueryParam = 'new' | 'trending_day' | 'trending_week' | 'top';
 
 const createCommunity = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.user;
@@ -219,6 +225,8 @@ const getCommunitiesFeed = (feedType: 'all' | 'subscribed') =>
 
     const limit = Number(req.query.limit as string) || 10;
     const cursor = req.query.cursor as string | undefined;
+    // TODO: Implement Zod validation
+    const sortBy = (req.query.sort as SortByQueryParam | undefined) || 'new';
 
     let postQueryWhereClause = undefined;
 
@@ -250,12 +258,39 @@ const getCommunitiesFeed = (feedType: 'all' | 'subscribed') =>
             ),
           ],
         },
+        ...(sortBy === 'trending_day' && {
+          createdAt: {
+            gte: TWENTY_FOUR_HOURS_AGO,
+          },
+        }),
+        ...(sortBy === 'trending_week' && {
+          createdAt: {
+            gte: WEEK_AGO,
+          },
+        }),
       };
     }
 
     const userPersonalFeedPosts = await prisma.post.findMany({
       ...(postQueryWhereClause && { where: postQueryWhereClause }),
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...(postQueryWhereClause === undefined &&
+        sortBy === 'trending_day' && {
+          where: {
+            createdAt: {
+              gte: TWENTY_FOUR_HOURS_AGO,
+            },
+          },
+        }),
+      ...(postQueryWhereClause === undefined &&
+        sortBy === 'trending_week' && {
+          where: {
+            createdAt: {
+              gte: WEEK_AGO,
+            },
+          },
+        }),
+      ...(sortBy === 'new' && { orderBy: [{ createdAt: 'desc' }] }),
+      ...(sortBy === 'top' && { orderBy: [{ upvotes: { _count: 'desc' } }] }),
       ...(cursor && {
         cursor: { id: cursor },
       }),
