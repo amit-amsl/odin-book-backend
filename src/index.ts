@@ -5,31 +5,47 @@ import morgan from 'morgan';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import RateLimit from 'express-rate-limit';
 import { authRouter } from './routes/auth.routes';
 import { communityRouter } from './routes/community.routes';
 import { postRouter } from './routes/post.routes';
 import { commentRouter } from './routes/comment.routes';
 import { userRouter } from './routes/user.routes';
 
+const isProduction = () => {
+  return process.env.NODE_ENV === 'production';
+};
+
 dotenv.config();
 const PORT = process.env.PORT || 3000;
-const ORIGIN_ADDR = 'http://localhost:5173';
 
 const app = express();
 const httpServer = createServer(app);
+
+const limiter = RateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 40,
+  validate: { xForwardedForHeader: false },
+});
 
 app.set('trust proxy', true);
 app.use(morgan('dev'));
 app.use(helmet());
 app.use(
   cors({
-    origin: ORIGIN_ADDR,
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   })
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+if (isProduction()) app.use(limiter);
+
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({ healthy: true });
+});
 
 app.use('/api/auth', authRouter);
 app.use('/api/user', userRouter);
