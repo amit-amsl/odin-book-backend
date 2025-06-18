@@ -6,6 +6,7 @@ import { StatusCodes } from 'http-status-codes';
 import { prisma } from '@/utils/db';
 import { z } from 'zod';
 import { loginSchema, registerSchema } from '@/validators/authSchemas';
+import { isProduction } from '@/index';
 
 type loginRequestBodyData = z.infer<typeof loginSchema>;
 
@@ -49,6 +50,8 @@ const login = asyncHandler(async (req: Request, res: Response) => {
   });
   res.cookie('authToken', jwtToken, {
     httpOnly: true,
+    secure: isProduction() ? true : false,
+    ...(isProduction() && { sameSite: 'none' }),
     expires: new Date(Date.now() + THREE_HOURS),
   });
 
@@ -100,10 +103,24 @@ const guestLogin = asyncHandler(async (req: Request, res: Response) => {
       email: guestEmail,
     },
   });
-  if (!user || !guestPassword) {
+  if (!guestEmail || !guestPassword) {
     res
       .status(StatusCodes.UNAUTHORIZED)
       .json({ message: 'Invalid Credentials' });
+    return;
+  }
+  if (!user) {
+    const hashedGuestPassword = await bcrypt.hash(guestPassword, 10);
+    await prisma.user.create({
+      data: {
+        email: guestEmail,
+        hashedPassword: hashedGuestPassword,
+        username: 'GuestUser',
+      },
+    });
+    res
+      .status(StatusCodes.OK)
+      .json({ message: 'Guest user created, please sign-in again' });
     return;
   }
 
@@ -128,6 +145,8 @@ const guestLogin = asyncHandler(async (req: Request, res: Response) => {
   });
   res.cookie('authToken', jwtToken, {
     httpOnly: true,
+    secure: isProduction() ? true : false,
+    ...(isProduction() && { sameSite: 'none' }),
     expires: new Date(Date.now() + THREE_HOURS),
   });
 

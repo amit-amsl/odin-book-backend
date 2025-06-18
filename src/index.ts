@@ -12,7 +12,7 @@ import { postRouter } from './routes/post.routes';
 import { commentRouter } from './routes/comment.routes';
 import { userRouter } from './routes/user.routes';
 
-const isProduction = () => {
+export const isProduction = () => {
   return process.env.NODE_ENV === 'production';
 };
 
