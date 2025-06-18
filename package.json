@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch --env-file=.env ./src/index.ts",
     "start": "node dist/index.js",
-    "build": "tsc -b"
+    "build": "rimraf dist && tsc -b && tsc-alias -p tsconfig.json"
   },
   "author": "",
   "license": "ISC",
@@ -27,6 +27,8 @@
     "eslint-plugin-prettier": "^5.2.5",
     "prettier": "^3.5.3",
     "prisma": "^6.5.0",
+    "rimraf": "^6.0.1",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   },
