@@ -1,14 +1,8 @@
 import { Router } from 'express';
 import { userAuthenticationCheck } from '@/middlewares/auth.middleware';
 import { validateRequestData } from '@/middlewares/validate.middleware';
+import { createPostSchema, handleVotingSchema } from '@/validators/postSchemas';
 import {
-  createCommentSchema,
-  createPostSchema,
-  handleVotingSchema,
-} from '@/validators/postSchemas';
-import {
-  createComment,
-  createCommentReply,
   createPost,
   getPostById,
   handlePostVoting,
@@ -35,24 +29,6 @@ postRouter.post(
 );
 
 postRouter.get('/:communityName/:postId/comments', getCommentsByPostId);
-
-postRouter.post(
-  '/:communityName/:postId/comment',
-  validateRequestData(createCommentSchema),
-  createComment
-);
-
-// postRouter.post(
-//   '/:communityName/:postId/:commentId/vote',
-//   validateRequestData(handleVotingSchema),
-//   handleCommentVoting
-// );
-
-postRouter.post(
-  '/:communityName/:postId/:commentId/reply',
-  validateRequestData(createCommentSchema),
-  createCommentReply
-);
 
 postRouter.post('/:communityName/:postId/bookmark', handlePostBookmark);
 

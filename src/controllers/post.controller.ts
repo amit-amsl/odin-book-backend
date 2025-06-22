@@ -2,19 +2,13 @@ import asyncHandler from 'express-async-handler';
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { prisma } from '@/utils/db';
-import {
-  createCommentSchema,
-  createPostSchema,
-  handleVotingSchema,
-} from '@/validators/postSchemas';
+import { createPostSchema, handleVotingSchema } from '@/validators/postSchemas';
 import { z } from 'zod';
 import { prismaPostQueryFieldSelection } from '@/utils/prismaUtils';
 
 type createPostRequestBodyData = z.infer<typeof createPostSchema>;
 
 type handleVotingRequestBodyData = z.infer<typeof handleVotingSchema>;
-
-type createCommentRequestBodyData = z.infer<typeof createCommentSchema>;
 
 const createPost = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.user;
@@ -265,6 +259,7 @@ const getCommentsByPostId = asyncHandler(
           select: {
             id: true,
             username: true,
+            profile_img_url: true,
           },
         },
         parentCommentId: true,
@@ -309,152 +304,6 @@ const getCommentsByPostId = asyncHandler(
     });
   }
 );
-
-const createComment = asyncHandler(async (req: Request, res: Response) => {
-  const { userId } = req.user;
-  const { communityName, postId } = req.params;
-  const { content } = req.body as createCommentRequestBodyData;
-
-  const communityExists = await prisma.community.findUnique({
-    where: {
-      normalizedName: communityName.toLowerCase(),
-    },
-  });
-
-  const postExists = await prisma.post.findUnique({
-    where: {
-      id: postId,
-      community: {
-        normalizedName: communityName.toLowerCase(),
-      },
-    },
-  });
-
-  if (!communityExists || !postExists) {
-    res
-      .status(StatusCodes.NOT_FOUND)
-      .json({ message: 'Community or Post does not exist!' });
-    return;
-  }
-
-  const createdComment = await prisma.comment.create({
-    data: {
-      content,
-      userId,
-      postId,
-    },
-    select: {
-      id: true,
-      author: {
-        select: {
-          id: true,
-          username: true,
-        },
-      },
-      parentCommentId: true,
-      content: true,
-      upvotes: {
-        where: {
-          id: userId,
-        },
-        select: {
-          id: true,
-        },
-      },
-      downvotes: {
-        where: {
-          id: userId,
-        },
-        select: {
-          id: true,
-        },
-      },
-      createdAt: true,
-      _count: {
-        select: {
-          upvotes: true,
-          downvotes: true,
-          replies: true,
-        },
-      },
-    },
-  });
-
-  res.status(StatusCodes.CREATED).json(createdComment);
-});
-
-const createCommentReply = asyncHandler(async (req: Request, res: Response) => {
-  const { userId } = req.user;
-  const { communityName, postId, commentId } = req.params;
-  const { content } = req.body as createCommentRequestBodyData;
-
-  const communityExists = await prisma.community.findUnique({
-    where: {
-      normalizedName: communityName.toLowerCase(),
-    },
-  });
-
-  const postExists = await prisma.post.findUnique({
-    where: {
-      id: postId,
-      community: {
-        normalizedName: communityName.toLowerCase(),
-      },
-    },
-  });
-
-  if (!communityExists || !postExists) {
-    res
-      .status(StatusCodes.NOT_FOUND)
-      .json({ message: 'Community or Post does not exist!' });
-    return;
-  }
-
-  const createdReply = await prisma.comment.create({
-    data: {
-      content,
-      userId,
-      postId,
-      parentCommentId: commentId,
-    },
-    select: {
-      id: true,
-      author: {
-        select: {
-          id: true,
-          username: true,
-        },
-      },
-      parentCommentId: true,
-      content: true,
-      upvotes: {
-        where: {
-          id: userId,
-        },
-        select: {
-          id: true,
-        },
-      },
-      downvotes: {
-        where: {
-          id: userId,
-        },
-        select: {
-          id: true,
-        },
-      },
-      createdAt: true,
-      _count: {
-        select: {
-          upvotes: true,
-          downvotes: true,
-        },
-      },
-    },
-  });
-
-  res.status(StatusCodes.CREATED).json(createdReply);
-});
 
 const handlePostBookmark = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.user;
@@ -520,7 +369,5 @@ export {
   getPostById,
   handlePostVoting,
   getCommentsByPostId,
-  createComment,
-  createCommentReply,
   handlePostBookmark,
 };

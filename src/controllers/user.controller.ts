@@ -260,8 +260,6 @@ const getUserBookmarks = asyncHandler(async (req: Request, res: Response) => {
 
 const editUserProfile = asyncHandler(async (req: Request, res: Response) => {
   const { username } = req.user;
-  console.log(req.file);
-  await fakeNetworkDelay(3000);
   const existingAvatar = await prisma.user.findUnique({
     where: {
       username,
@@ -302,14 +300,6 @@ const editUserProfile = asyncHandler(async (req: Request, res: Response) => {
       .json({ message: 'User profile updated successfully' });
   }
 });
-
-const fakeNetworkDelay = async (t: number) => {
-  return new Promise<void>((resolve, reject) => {
-    setTimeout(() => {
-      resolve();
-    }, t);
-  });
-};
 
 export {
   getUserSubscribedCommunities,

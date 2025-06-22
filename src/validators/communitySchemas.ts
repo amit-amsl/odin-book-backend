@@ -12,3 +12,14 @@ export const createCommunitySchema = z.object({
     ),
   description: z.string().optional(),
 });
+
+export const communitiesFeedSchema = z.object({
+  sort: z.union([
+    z.literal('new'),
+    z.literal('trending_day'),
+    z.literal('trending_week'),
+    z.literal('top'),
+  ]),
+  cursor: z.string().optional(),
+  limit: z.string().optional(),
+});

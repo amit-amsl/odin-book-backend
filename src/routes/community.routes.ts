@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import { userAuthenticationCheck } from '@/middlewares/auth.middleware';
 import { validateRequestData } from '@/middlewares/validate.middleware';
-import { createCommunitySchema } from '@/validators/communitySchemas';
+import {
+  communitiesFeedSchema,
+  createCommunitySchema,
+} from '@/validators/communitySchemas';
 import {
   createCommunity,
   getCommunity,
@@ -20,9 +23,17 @@ communityRouter.post(
   createCommunity
 );
 
-communityRouter.get('/feed', getCommunitiesFeed('subscribed'));
+communityRouter.get(
+  '/feed',
+  validateRequestData(communitiesFeedSchema, 'query'),
+  getCommunitiesFeed('subscribed')
+);
 
-communityRouter.get('/all', getCommunitiesFeed('all'));
+communityRouter.get(
+  '/all',
+  validateRequestData(communitiesFeedSchema, 'query'),
+  getCommunitiesFeed('all')
+);
 
 communityRouter.get('/:communityName', getCommunity);
 
