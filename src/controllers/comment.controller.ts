@@ -315,6 +315,7 @@ const handleCommentVoting = asyncHandler(
           select: {
             id: true,
             username: true,
+            profile_img_url: true,
           },
         },
         parentCommentId: true,

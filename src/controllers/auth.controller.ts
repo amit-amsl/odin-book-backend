@@ -88,7 +88,11 @@ const register = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const logout = asyncHandler(async (req: Request, res: Response) => {
-  res.clearCookie('authToken');
+  res.clearCookie('authToken', {
+    httpOnly: true,
+    secure: isProduction() ? true : false,
+    ...(isProduction() && { sameSite: 'none' }),
+  });
   res
     .status(StatusCodes.OK)
     .json({ msg: `User has been logged out successfully!` });
