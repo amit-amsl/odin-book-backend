@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16
+    restart: always
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=tidder_app
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d tidder_app']
+      interval: 5s
+      timeout: 2s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  tidder-backend:
+    image: 'tidder-backend'
+    build:
+      context: .
+      dockerfile: Dockerfile
+    tty: true
+    env_file: '.env'
+    ports:
+      - '3000:3000'
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

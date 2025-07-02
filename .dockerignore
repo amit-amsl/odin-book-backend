@@ -1,0 +1,17 @@
+# Private keys
+.env
+.env.docker
+
+# Useless files
+.dockerignore
+Dockerfile
+
+# Dependencies / Useless and heavy folders
+node_modules
+build
+dist
+
+# Git files
+.gitignore
+.git
+
