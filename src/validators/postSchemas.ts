@@ -3,8 +3,23 @@ import { z } from 'zod';
 export const createPostSchema = z.object({
   title: z.string().min(12).max(150),
   content: z.string().optional(),
-  isNSFW: z.boolean(),
-  isSpoiler: z.boolean(),
+  youtubeUrl: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || /^https?:\/\/(www\.)?youtube\.com|youtu\.be/.test(val),
+      {
+        message: 'Must be a valid YouTube URL',
+      }
+    ),
+  isNSFW: z
+    .string()
+    .transform((val) => val === 'true')
+    .pipe(z.boolean()),
+  isSpoiler: z
+    .string()
+    .transform((val) => val === 'true')
+    .pipe(z.boolean()),
 });
 
 export const handleVotingSchema = z.object({

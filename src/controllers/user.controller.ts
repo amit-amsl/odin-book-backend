@@ -271,16 +271,19 @@ const editUserProfile = asyncHandler(async (req: Request, res: Response) => {
 
   if (req.file) {
     const resizedAvatarBuffer = await sharp(req.file.buffer)
-      .resize(150, 150)
+      .rotate()
+      .resize({ width: 256, height: 256, fit: 'cover', position: 'center' })
+      .webp({ quality: 80 })
       .toBuffer();
+
     const uploadedAvatarCloudinaryRes = (await uploadFileToCloudinary(
       resizedAvatarBuffer,
       {
-        folder: 'tidder_app',
+        folder: 'tidder_app/profile_pics',
         resource_type: 'image',
       }
     )) as UploadApiResponse;
-    console.log(uploadedAvatarCloudinaryRes);
+
     await prisma.user.update({
       where: {
         username,

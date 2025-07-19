@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { userAuthenticationCheck } from '@/middlewares/auth.middleware';
 import { validateRequestData } from '@/middlewares/validate.middleware';
 import { createPostSchema, handleVotingSchema } from '@/validators/postSchemas';
+import { uploadImageFile } from '@/middlewares/multer.middleware';
 import {
   createPost,
   getPostById,
@@ -16,6 +17,7 @@ postRouter.use(userAuthenticationCheck);
 
 postRouter.post(
   '/:communityName',
+  uploadImageFile.single('image'),
   validateRequestData(createPostSchema),
   createPost
 );

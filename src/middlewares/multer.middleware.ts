@@ -2,7 +2,7 @@ import multer from 'multer';
 
 const uploadImageFile = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 3_000_000 },
+  limits: { fileSize: 5_000_000 },
   fileFilter: (_req, file, cb) => {
     const fileWhitelist = ['image/png', 'image/jpeg', 'image/jpg'];
 

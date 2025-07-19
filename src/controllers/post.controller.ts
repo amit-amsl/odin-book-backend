@@ -5,6 +5,10 @@ import { prisma } from '@/utils/db';
 import { createPostSchema, handleVotingSchema } from '@/validators/postSchemas';
 import { z } from 'zod';
 import { prismaPostQueryFieldSelection } from '@/utils/prismaUtils';
+import { UploadApiResponse } from 'cloudinary';
+import { uploadFileToCloudinary } from '@/utils/cloudinary';
+import sharp from 'sharp';
+import { extractYouTubeIdFromURL } from '@/utils/youtube';
 
 type createPostRequestBodyData = z.infer<typeof createPostSchema>;
 
@@ -13,7 +17,7 @@ type handleVotingRequestBodyData = z.infer<typeof handleVotingSchema>;
 const createPost = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { communityName } = req.params;
-  const { title, content, isNSFW, isSpoiler } =
+  const { title, content, isNSFW, isSpoiler, youtubeUrl } =
     req.body as createPostRequestBodyData;
 
   const communityExists = await prisma.community.findUnique({
@@ -28,6 +32,27 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
       .json({ message: 'Community does not exist!' });
     return;
   }
+  let uploadedPostImageCloudinaryRes: UploadApiResponse | null = null;
+
+  if (req.file) {
+    const resizedPostImageBuffer = await sharp(req.file.buffer)
+      .rotate()
+      .resize({ width: 1280 })
+      .webp({ quality: 80 })
+      .toBuffer();
+    uploadedPostImageCloudinaryRes = (await uploadFileToCloudinary(
+      resizedPostImageBuffer,
+      {
+        folder: 'tidder_app/post_images',
+        resource_type: 'image',
+      }
+    )) as UploadApiResponse;
+  }
+
+  let extractedVideoID: string | null = null;
+  if (youtubeUrl) {
+    extractedVideoID = extractYouTubeIdFromURL(youtubeUrl);
+  }
 
   const createdPost = await prisma.post.create({
     data: {
@@ -36,6 +61,11 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
       author: {
         connect: { id: userId },
       },
+      ...(uploadedPostImageCloudinaryRes && {
+        image_publicId: uploadedPostImageCloudinaryRes?.public_id,
+        image_url: uploadedPostImageCloudinaryRes?.secure_url,
+      }),
+      ...(youtubeUrl && { youtube_vid_id: extractedVideoID }),
       community: { connect: { normalizedName: communityName.toLowerCase() } },
       isNSFW,
       isSpoiler,
@@ -78,7 +108,10 @@ const getPostById = asyncHandler(async (req: Request, res: Response) => {
         normalizedName: communityName.toLowerCase(),
       },
     },
-    select: { ...prismaPostQueryFieldSelection(userId), content: true },
+    select: {
+      ...prismaPostQueryFieldSelection(userId),
+      content: true,
+    },
   });
 
   if (!post) {

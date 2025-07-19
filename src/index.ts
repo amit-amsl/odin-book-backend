@@ -24,11 +24,10 @@ const httpServer = createServer(app);
 
 const limiter = RateLimit({
   windowMs: 1 * 60 * 1000,
-  max: 40,
+  max: 30,
   validate: { xForwardedForHeader: false },
 });
 
-app.set('trust proxy', true);
 app.use(morgan('dev'));
 app.use(helmet());
 app.use(
@@ -58,4 +57,10 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
-httpServer.listen(PORT, () => console.log(`listening on port ${PORT}!`));
+httpServer.listen(PORT, () => {
+  console.log('=================================');
+  console.log(
+    `🚀 Server running on port ${PORT} in ${process.env.NODE_ENV} mode`
+  );
+  console.log('=================================');
+});

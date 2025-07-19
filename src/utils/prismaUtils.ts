@@ -2,6 +2,8 @@ export const prismaPostQueryFieldSelection = (userId: string) => {
   return {
     id: true,
     title: true,
+    image_url: true,
+    youtube_vid_id: true,
     author: {
       select: {
         id: true,
