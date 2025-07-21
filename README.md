@@ -9,7 +9,7 @@ The backend API which powers the Tidder social media platform.
 <a href="https://nodejs.org">
   <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white" height="40" alt="Node.js">
 </a>
-<a href="https://www.typescriptlang.org/">
+<a href="https://www.typescriptlang.org">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" height="40" alt="Typescript">
 </a>
 <a href="https://expressjs.com">
@@ -21,14 +21,14 @@ The backend API which powers the Tidder social media platform.
 <a href="https://www.prisma.io">
   <img src="https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white" height="40" alt="Prisma">
 </a>
-<a href="https://www.cloudinary.com/">
+<a href="https://cloudinary.com/">
   <img src="https://img.shields.io/badge/Cloudinary-3448C5?style=for-the-badge&logo=Cloudinary&logoColor=white
   " height="40" alt="Cloudinary">
 </a>
-<a href="https://jwt.io/">
+<a href="https://jwt.io">
   <img src="https://img.shields.io/badge/JWT-black?style=for-the-badge&logo=JSON%20web%20tokens&logoColor=white" height="40" alt="JWT">
 </a>
-<a href="https://zod.dev/">
+<a href="https://zod.dev">
   <img src="https://img.shields.io/badge/zod-%233068b7.svg?style=for-the-badge&logo=zod&logoColor=white" height="40" alt="Zod" />
 </a>
 
