@@ -22,8 +22,7 @@ The backend API which powers the Tidder social media platform.
   <img src="https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white" height="40" alt="Prisma">
 </a>
 <a href="https://cloudinary.com/">
-  <img src="https://img.shields.io/badge/Cloudinary-3448C5?style=for-the-badge&logo=Cloudinary&logoColor=white
-  " height="40" alt="Cloudinary">
+  <img src="https://img.shields.io/badge/Cloudinary-3448C5?style=for-the-badge&logo=Cloudinary&logoColor=white" height="40" alt="Cloudinary">
 </a>
 <a href="https://jwt.io">
   <img src="https://img.shields.io/badge/JWT-black?style=for-the-badge&logo=JSON%20web%20tokens&logoColor=white" height="40" alt="JWT">
